@@ -1,0 +1,33 @@
+name: Tests in Airlock
+
+on:
+  push:
+  workflow_dispatch:      # also lets you run it by hand from the Actions tab
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run the tests in an Airlock sandbox
+        id: airlock
+        uses: farvez/airlock-action@v1
+        with:
+          api-key: ${{ secrets.AIRLOCK_API_KEY }}
+          egress: pypi                  # the only site the sandbox can reach
+          run: pip install -r requirements.txt && python -m pytest -v --junitxml=results/junit.xml
+          download: results             # copy the test report back to the runner
+
+      - name: Show what happened
+        if: always()
+        run: |
+          echo "Exit code: ${{ steps.airlock.outputs.exit-code }}"
+          echo "Sandbox session: ${{ steps.airlock.outputs.session-id }}"
+
+      - name: Save the test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: airlock-results/
